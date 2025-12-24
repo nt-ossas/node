@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Test sync</title>
+</head>
+<body>
+  <input id="text" placeholder="Scrivi qualcosa..." />
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const socket = io('http://localhost:3000');
+
+    const input = document.getElementById('text');
+
+    // Quando scrivo, mando lo stato al server
+    input.addEventListener('input', () => {
+      socket.emit('updateState', { value: input.value });
+    });
+
+    // Quando un altro client cambia lo stato, lo ricevo
+    socket.on('stateUpdated', (data) => {
+      input.value = data.value;
+    });
+  </script>
+</body>
+</html>

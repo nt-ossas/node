@@ -1,26 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <title>Test sync</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>App Realtime Sincronizzata</title>
+  <style>
+    body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
+    input { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #007bff; border-radius: 8px; }
+    #status { margin: 20px 0; padding: 10px; border-radius: 5px; }
+    .online { background: #d4edda; color: #155724; }
+    .offline { background: #f8d7da; color: #721c24; }
+    button { margin-top: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+  </style>
 </head>
 <body>
-  <input id="text" placeholder="Scrivi qualcosa..." />
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <h1>🟢 Test Sincronizzazione Realtime</h1>
+  <p>Scrivi qui → si sincronizza con <strong>tutti</strong> i client aperti!</p>
+  
+  <input id="sharedInput" placeholder="Tutti vedranno quello che scrivi...">
+  <div id="status" class="offline">🔴 Disconnesso</div>
+  <button onclick="getStats()">📊 Stats Server</button>
+  <div id="stats"></div>
+
+  <!-- Socket.IO CDN -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
-    const socket = io('http://localhost:3000');
+    // CONNESSIONE SOCKET.IO
+    const socket = io(); // Auto-connette allo stesso dominio
+    
+    const input = document.getElementById('sharedInput');
+    const status = document.getElementById('status');
+    const statsDiv = document.getElementById('stats');
 
-    const input = document.getElementById('text');
-
-    // Quando scrivo, mando lo stato al server
-    input.addEventListener('input', () => {
-      socket.emit('updateState', { value: input.value });
+    // EVENTI
+    
+    // Client connesso
+    socket.on('connect', () => {
+      status.textContent = `🟢 Connesso (${socket.id.slice(0,8)}...)`;
+      status.className = 'online';
     });
 
-    // Quando un altro client cambia lo stato, lo ricevo
+    // Client disconnesso
+    socket.on('disconnect', () => {
+      status.textContent = '🔴 Disconnesso';
+      status.className = 'offline';
+    });
+
+    // Riceve update da altri client
     socket.on('stateUpdated', (data) => {
       input.value = data.value;
+      console.log('📡 Sync ricevuto:', data);
     });
+
+    // INPUT SYNC
+    input.addEventListener('input', () => {
+      // Manda stato a server → broadcast agli altri
+      socket.emit('updateState', { 
+        value: input.value,
+        timestamp: Date.now()
+      });
+    });
+
+    // STATS SERVER
+    function getStats() {
+      fetch('/api/stats')
+        .then(res => res.json())
+        .then(data => {
+          statsDiv.innerHTML = `
+            <h3>📈 Stats Server</h3>
+            <p>RAM: ${data.ramGB} GB</p>
+            <p>Uptime: ${Math.floor(data.uptime/3600)}h ${Math.floor((data.uptime%3600)/60)}m</p>
+          `;
+        });
+    }
   </script>
 </body>
 </html>
